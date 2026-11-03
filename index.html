@@ -91,6 +91,13 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 .mini b.c{background:var(--hit)} .mini b.p{background:var(--near)}
 .daysum{margin:0;font-size:.95rem}
 .daysum b{color:var(--gold)}
+.tipzone{display:flex;justify-content:center;min-height:40px}
+.tipbtn{border:1px solid var(--gold);background:transparent;color:var(--gold);border-radius:999px;padding:8px 20px;font:700 .95rem var(--f-body);cursor:pointer;min-height:40px}
+.tipbtn:disabled{border-color:var(--line);color:var(--muted);cursor:default}
+.tipbtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.tipask{position:fixed;z-index:12;left:50%;top:50%;transform:translate(-50%,-50%);width:min(380px,calc(100% - 32px));background:var(--night-2);border:1px solid var(--gold);border-radius:10px;padding:16px;text-align:center;display:grid;gap:12px;box-shadow:0 0 0 100vmax rgba(5,10,16,.6)}
+.tipask p{margin:0;line-height:1.45}
+.tipask .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .tipbadge{display:inline-block;margin-top:3px;padding:1px 7px;border:1px solid var(--gold);border-radius:999px;color:var(--gold);font-size:.72rem;font-weight:800;letter-spacing:.04em}
 .rank .tips{color:var(--gold);font-weight:700}
 
@@ -103,9 +110,9 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 .gbtn.gold{background:var(--gold);color:var(--night)}
 .gbtn:focus-visible,.kk:focus-visible{outline:2px solid var(--gold)}
 .gbtn.tip{background:transparent;border:1px solid var(--gold);color:var(--gold)}
-.gmain{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:10px 0;overflow-y:auto}
+.gmain{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:safe center;gap:12px;padding:10px 0;overflow-y:auto}
 .hint{max-width:420px;text-align:center;color:var(--gold);font-style:italic;margin:0;min-height:1.2em;padding:0 8px}
-.board{display:grid;grid-template-rows:repeat(6,1fr);gap:6px;--t:min(15vw,9.2vh,62px)}
+.board{display:grid;grid-template-rows:repeat(6,1fr);gap:6px;--t:min(15vw,7.8vh,62px)}
 .row{display:grid;grid-template-columns:repeat(5,var(--t));gap:6px}
 .tile{width:var(--t);height:var(--t);border:2px solid var(--line);border-radius:4px;display:grid;place-items:center;font:800 calc(var(--t)*.5) var(--f-body);color:var(--snow);background:transparent}
 .tile.filled{border-color:var(--muted);animation:pop .1s}
@@ -167,10 +174,15 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
   <div class="gbar">
     <button class="gbtn" id="back" type="button">← Kalender</button>
     <h2 id="gtitle">Türchen</h2>
-    <button class="gbtn tip" id="tipBtn" type="button">Tipp</button>
+    <button class="gbtn" id="gHelp" type="button" aria-label="Anleitung">?</button>
   </div>
   <div class="gmain">
     <p class="hint" id="hint"></p>
+    <div class="tipzone"><button class="tipbtn" id="tipBtn" type="button" disabled>Tipp</button></div>
+    <div class="tipask" id="tipAsk" hidden>
+      <p><b>Tipp aufdecken?</b><br>Für dieses Türchen gibt es dann einen Punkt weniger, und in der Bestenliste steht bei dir „mit Tipp“.</p>
+      <div class="btns"><button class="gbtn" id="tipNo" type="button">Doch nicht</button><button class="gbtn gold" id="tipYes" type="button">Tipp aufdecken</button></div>
+    </div>
     <div class="board" id="board"></div>
     <div class="result" id="result" hidden></div>
   </div>
@@ -183,7 +195,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
     <p>Errate das Wort mit <b>5 Buchstaben</b>. Du hast <b>6 Versuche</b>. Tippe ein Wort ein und drücke <b>Senden</b>.</p>
     <div class="demo"><div class="tile absent">H</div><div class="tile correct">A</div><div class="tile absent">R</div><div class="tile present">F</div><div class="tile present">E</div></div>
     <p><b style="color:var(--hit)">Grün:</b> Buchstabe steht an der richtigen Stelle.<br><b style="color:var(--near)">Gelb:</b> kommt im Wort vor, aber woanders.<br><b style="color:var(--muted)">Grau:</b> kommt nicht vor.</p>
-    <p>Ä, Ö, Ü und ß zählen als eigene Buchstaben. Wenn du nicht weiterkommst, hilft der Knopf <b>Tipp</b>.</p>
+    <p>Ä, Ö, Ü und ß zählen als eigene Buchstaben. Ab dem 3. Fehlversuch kannst du einen <b>Tipp</b> aufdecken, das kostet aber einen Punkt.</p>
     <p>Jeden Tag im Dezember öffnet sich ein neues Türchen, bis Heiligabend. Unten auf der Seite siehst du die <b>Bestenliste</b> mit allen, die mitraten.</p>
     <div class="btns"><button class="gbtn gold" id="helpClose" type="button">Los geht's</button></div>
   </div>
@@ -207,7 +219,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ===================== HIER ANPASSEN =====================
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 const NAME = "Mama";          // wird in Überschrift und Weihnachtsgruß verwendet
 const JAHR = 2026;            // Dezember dieses Jahres
 // Firebase-Zugangsdaten (Firebase-Konsole > Projekteinstellungen > Deine Apps > Web-App > Konfiguration)
@@ -222,30 +234,30 @@ const FIREBASE_CONFIG = {
 };
 // 24 Wörter mit genau 5 Buchstaben (Ä/Ö/Ü/ß zählen als 1 Buchstabe) + Tipp
 const WOERTER = [
-  ["STERN","Leuchtet ganz oben auf der Baumspitze."],
-  ["KERZE","Am Adventskranz brennt jede Woche eine mehr."],
-  ["APFEL","Rotbackig, und er liegt gern im Nikolausstiefel."],
-  ["MÜTZE","Hält im Winter den Kopf warm."],
-  ["SOCKE","Gestrickt und dick, für kalte Füße."],
-  ["KRANZ","Aus Tannengrün, mit vier Kerzen darauf."],
-  ["HONIG","Süß, von Bienen gemacht, gehört in Lebkuchen."],
-  ["KUGEL","Hängt rund und glänzend am Weihnachtsbaum."],
-  ["TANNE","Der klassische Weihnachtsbaum."],
-  ["KAKAO","Heißes Getränk, gern mit Sahne obendrauf."],
-  ["FROST","Malt Eisblumen an die Fensterscheiben."],
-  ["SCHAL","Wird bei Kälte um den Hals gewickelt."],
-  ["LICHT","Am 13. Dezember ist Luciafest, das Fest des …"],
-  ["ORGEL","Das große Instrument in der Kirche."],
-  ["KAMIN","Hier knistert das Feuer."],
-  ["FLÖTE","Darauf lernen viele Kinder „Alle Jahre wieder“."],
-  ["WOLLE","Daraus strickt man Mützen und Socken."],
-  ["GLANZ","Was Lametta und Kugeln verbreiten."],
-  ["DECKE","Kuschelig auf dem Sofa an kalten Abenden."],
-  ["RODEL","Ein anderes Wort für Schlitten."],
-  ["KRONE","Tragen die Heiligen Drei Könige auf dem Kopf."],
-  ["GLÜCK","Schornsteinfeger sollen es bringen."],
-  ["ENGEL","Verkündete den Hirten die frohe Botschaft."],
-  ["LIEBE","Das Wichtigste an Heiligabend."]
+  ["DOCHT","Ohne ihn brennt keine Kerze."],
+  ["NELKE","Gewürz, das man in Orangen steckt."],
+  ["STROH","Daraus bastelt man Sterne für den Baum."],
+  ["ZWEIG","Heute ist Barbaratag: Man schneidet ihn vom Kirschbaum."],
+  ["KLAMM","So fühlen sich die Finger nach dem Schneeschippen an."],
+  ["MITRA","Die hohe Mütze des heiligen Nikolaus."],
+  ["WACHS","Tropft von der Kerze auf die Tischdecke."],
+  ["PORTO","Das kostet der Weihnachtsbrief an die Verwandtschaft."],
+  ["NADEL","Fällt vom Baum und steckt dann im Teppich."],
+  ["SIRUP","Dickflüssig und süß, zum Beispiel aus Zuckerrüben."],
+  ["KOMET","Hat einen Schweif und wird gern über die Krippe gemalt."],
+  ["LIKÖR","Mit Ei wird er gelb und cremig."],
+  ["LUCIA","Heilige mit Lichterkranz auf dem Kopf, ihr Fest ist heute."],
+  ["ALTAR","Darauf stehen in der Kirche Kerzen und Kreuz."],
+  ["HIRTE","Hütete nachts auf dem Feld die Schafe."],
+  ["BOGEN","Erzgebirgischer Lichterschmuck fürs Fenster: Schwib…"],
+  ["WIEGE","Das Kind im Stall hatte keine richtige …"],
+  ["FEIGE","Getrocknet liegt sie auf dem bunten Teller."],
+  ["SEGEN","Die Sternsinger schreiben ihn mit Kreide an die Tür."],
+  ["LOIPE","Spur im Schnee für Skilangläufer."],
+  ["NEBEL","Liegt am kürzesten Tag des Jahres oft grau über den Feldern."],
+  ["OCHSE","Stand neben dem Esel im Stall."],
+  ["GLATT","So ist die Straße bei Blitzeis."],
+  ["METTE","Gottesdienst in der Heiligen Nacht: Christ…"]
 ];
 // Reihenfolge der Türchen auf dem Kalender (gemischt wie bei einem echten Kalender)
 const REIHENFOLGE = [7,15,3,22,11,1,18,9,24,5,13,20,2,16,10,23,6,19,12,4,21,8,17,14];
@@ -325,7 +337,6 @@ function openGame(d){
   if(!state[d]) state[d]={guesses:[]};
   $("gtitle").textContent=`Türchen ${d}`;
   $("hint").textContent = state[d].tip ? "Tipp: "+WOERTER[d-1][1] : "";
-  $("tipBtn").hidden = !!state[d].tip || !!state[d].done;
   buildBoard(); buildKb(); paint(false);
   $("game").hidden=false; document.body.style.overflow="hidden";
 }
@@ -361,6 +372,7 @@ function paint(animLast){
   const applyKeys=()=>document.querySelectorAll(".kk").forEach(b=>{ b.classList.remove("correct","present","absent"); if(keyState[b.dataset.k]) b.classList.add(keyState[b.dataset.k]); });
   if(animLast) setTimeout(applyKeys,1500); else applyKeys();
   if(s.done) setTimeout(showResult, animLast?1600:0); else { $("result").hidden=true; $("kb").hidden=false; }
+  updateTip();
 }
 function press(k){
   if(busy || !cur || state[cur].done) return;
@@ -380,7 +392,7 @@ function submit(){
 }
 function showResult(){
   const s=state[cur], word=WOERTER[cur-1][0], n=triesOf(cur), r=$("result");
-  $("kb").hidden=true; $("tipBtn").hidden=true;
+  $("kb").hidden=true; updateTip();
   let html;
   if(s.done==="won") html=`<h3>Gelöst!</h3><p>Du hast <span class="sol">${word}</span> in ${n} ${n===1?"Versuch":"Versuchen"} erraten.</p>`;
   else html=`<h3>Schade!</h3><p>Das gesuchte Wort war <span class="sol">${word}</span>.</p>`;
@@ -465,7 +477,7 @@ function loadDemo(){
       let n=1; while(n<7 && rnd()>skill*.55+.08*n) n++;   // gebrauchte Versuche
       const won=n<=6, tries=won?n:6, muster=[];
       for(let t=0;t<tries;t++) muster.push(won&&t===tries-1?"ccccc":row(Math.min(4,Math.floor(t*1.2+rnd()*1.5))));
-      tage[d]={n:tries, won, tip:rnd()<.15, muster, zeit:new Date(JAHR,11,d,6+Math.floor(rnd()*17),Math.floor(rnd()*60)).getTime()};
+      tage[d]={n:tries, won, tip:tries>=4&&rnd()<.35, muster, zeit:new Date(JAHR,11,d,6+Math.floor(rnd()*17),Math.floor(rnd()*60)).getTime()};
     }
     players["demo"+i]={name, tage};
   });
@@ -568,7 +580,19 @@ function renderDay(ps){
 
 // ---------- Bedienung ----------
 $("back").onclick=closeGame;
-$("tipBtn").onclick=()=>{ state[cur].tip=true; save(); $("hint").textContent="Tipp: "+WOERTER[cur-1][1]; $("tipBtn").hidden=true; };
+function updateTip(){
+  const s=state[cur], btn=$("tipBtn");
+  $("tipAsk").hidden=true;
+  if(!s || s.done || s.tip){ btn.parentNode.hidden=true; return; }
+  btn.parentNode.hidden=false;
+  const need=3-triesOf(cur);
+  if(need>0){ btn.disabled=true; btn.textContent=`Tipp nach ${need} weiteren ${need===1?"Fehlversuch":"Fehlversuchen"}`; }
+  else { btn.disabled=false; btn.textContent="Tipp anzeigen"; }
+}
+$("tipBtn").onclick=()=>{ if(busy) return; $("tipBtn").parentNode.hidden=true; $("tipAsk").hidden=false; $("tipYes").focus(); };
+$("tipNo").onclick=()=>updateTip();
+$("tipYes").onclick=()=>{ state[cur].tip=true; save(); $("hint").textContent="Tipp: "+WOERTER[cur-1][1]; updateTip(); };
+$("gHelp").onclick=()=>$("help").hidden=false;
 document.addEventListener("keydown",e=>{
   if(!$("nameDlg").hidden) return;
   if(!$("help").hidden){ if(e.key==="Escape"||e.key==="Enter"){ closeHelp(); } return; }

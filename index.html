@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mamas Advents-Wördle</title>
+<style>[hidden]{display:none!important}body{margin:0}:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@600;700&family=Figtree:wght@400;600;800&display=swap">
+<style>
+/* Layout: Winternacht – Kalenderwand mit 24 Türchen, darunter Bestenliste & Statistik; Spiel als Vollbild-Ebene */
+:root{
+  --night:#0f1c29; --night-2:#16283a; --night-3:#1c3247; --fir:#1d4134; --berry:#8e2a35; --ink:#22374d;
+  --gold:#e6b94f; --silver:#c3ccd4; --bronze:#c4864f; --snow:#f4f1ea; --muted:#9aa9b6; --line:#3a4d60;
+  --hit:#4e9b5c; --near:#d2a228; --miss:#3d4855; --key:#2b3d50; --key-fg:#eef2f5;
+  --f-display:"Grenze Gotisch", "Old English Text MT", Georgia, serif;
+  --f-body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--night);color:var(--snow);font-family:var(--f-body);font-size:16px;-webkit-tap-highlight-color:transparent}
+#snow{position:fixed;inset:0;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:grid;gap:6px;text-align:center;margin-bottom:22px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(2.3rem,8vw,3.6rem);line-height:1;margin:0;color:var(--gold);text-wrap:balance;letter-spacing:.01em}
+.sub{color:var(--muted);margin:0;font-size:1.02rem}
+.status{margin:10px auto 0;padding:10px 16px;border:1px solid var(--line);border-radius:999px;background:var(--night-2);font-weight:600;display:inline-block;justify-self:center}
+.status b{color:var(--gold)}
+.cal{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (min-width:620px){.cal{grid-template-columns:repeat(6,1fr);gap:12px}}
+.door{position:relative;aspect-ratio:1/1.12;max-width:100%;border:0;border-radius:6px;cursor:pointer;color:var(--gold);font-family:var(--f-display);font-size:clamp(1.9rem,8vw,2.6rem);font-weight:700;display:grid;place-items:center;
+  box-shadow:inset 0 0 0 2px rgba(230,185,79,.35),0 4px 0 rgba(0,0,0,.35);transition:transform .15s}
+.door::after{content:"";position:absolute;inset:7px;border:1px dashed rgba(230,185,79,.35);border-radius:3px;pointer-events:none}
+.door:nth-child(3n+1){background:var(--fir)} .door:nth-child(3n+2){background:var(--berry)} .door:nth-child(3n){background:var(--ink)}
+.door:hover:not(.locked){transform:translateY(-2px)}
+.door:focus-visible,.chip:focus-visible,.linkbtn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.door .lbl{position:absolute;bottom:9px;left:0;right:0;font-family:var(--f-body);font-size:.68rem;font-weight:600;letter-spacing:.04em;color:var(--snow);opacity:.75}
+.door.locked{filter:saturate(.45) brightness(.7);cursor:default}
+.door.today{box-shadow:inset 0 0 0 2px var(--gold),0 0 0 3px rgba(230,185,79,.55),0 0 22px rgba(230,185,79,.45)}
+.door.d24{color:var(--snow)}
+.door.done{background:var(--snow)!important;color:var(--night)}
+.door.done::after{border-color:rgba(15,28,41,.25)}
+.door.done .num{font-size:.62em;opacity:.55;position:absolute;top:6px;left:9px}
+.door .word{font-family:var(--f-body);font-weight:800;font-size:clamp(.72rem,3vw,.95rem);letter-spacing:.08em}
+.door.won .word{color:var(--hit)} .door.lost .word{color:var(--berry)}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+.foot{margin-top:18px;text-align:center;color:var(--muted);font-size:.9rem;display:flex;gap:4px 14px;justify-content:center;flex-wrap:wrap;align-items:center}
+.linkbtn{background:none;border:0;color:var(--gold);font:inherit;font-weight:600;text-decoration:underline;cursor:pointer;padding:6px}
+
+/* Bestenliste & Statistik */
+.stats{margin-top:40px;display:grid;gap:18px}
+.stats h2{font-family:var(--f-display);color:var(--gold);font-size:clamp(2rem,6vw,2.6rem);font-weight:700;margin:0;text-align:center;line-height:1}
+.panel{background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0}
+.panel h3{margin:0;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.note{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45}
+.me-line{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.92rem}
+.me-line b{color:var(--snow)}
+table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.rank th{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:right;font-weight:800;padding:0 6px 8px}
+.rank th:nth-child(2),.rank td:nth-child(2){text-align:left}
+.rank td{padding:9px 6px;border-top:1px solid var(--line);text-align:right}
+.rank td:nth-child(2){font-weight:600;overflow-wrap:anywhere}
+.rank tr.me td{background:rgba(230,185,79,.08)}
+.rank .pts{font-weight:800;color:var(--gold);font-size:1.1rem}
+.place{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;font-weight:800;font-size:.9rem;border:1px solid var(--line)}
+.place.p1{background:var(--gold);color:var(--night);border:0}.place.p2{background:var(--silver);color:var(--night);border:0}.place.p3{background:var(--bronze);color:var(--night);border:0}
+.tablewrap{overflow-x:auto}
+.recs{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.rec{background:var(--night-3);border-radius:8px;padding:12px;display:grid;gap:4px;min-width:0}
+.rec .k{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:800}
+.rec .v{font-family:var(--f-display);font-size:1.6rem;color:var(--gold);line-height:1.05;overflow-wrap:anywhere}
+.rec .d{font-size:.9rem;color:var(--snow);opacity:.85}
+.dist{display:grid;gap:5px;font-variant-numeric:tabular-nums}
+.bar{display:grid;grid-template-columns:22px 1fr;gap:8px;align-items:center;font-weight:800}
+.bar span{display:block;min-width:28px;padding:3px 8px;border-radius:3px;background:var(--miss);text-align:right;font-size:.85rem}
+.bar.top span{background:var(--hit)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{min-width:40px;height:38px;border-radius:6px;border:1px solid var(--line);background:var(--night-3);color:var(--snow);font:700 .95rem var(--f-body);cursor:pointer}
+.chip.sel{background:var(--gold);color:var(--night);border-color:var(--gold)}
+.chip:disabled{opacity:.35;cursor:default}
+.dayrows{display:grid;gap:8px}
+.dayrow{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.dayrow .nm{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.dayrow .res{font-size:.9rem;color:var(--muted);text-align:right}
+.dayrow .res b{color:var(--snow)}
+.mini{display:grid;gap:2px}
+.mini i{display:flex;gap:2px}
+.mini b{width:9px;height:9px;border-radius:1px;background:var(--miss)}
+.mini b.c{background:var(--hit)} .mini b.p{background:var(--near)}
+.daysum{margin:0;font-size:.95rem}
+.daysum b{color:var(--gold)}
+
+/* Spiel-Ebene */
+#game{position:fixed;inset:0;z-index:5;background:var(--night);display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:max(8px,env(safe-area-inset-bottom,0px));padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+.gbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.gbar h2{margin:0;font-family:var(--f-display);color:var(--gold);font-size:1.9rem;font-weight:700}
+.gbtn{background:var(--key);color:var(--key-fg);border:0;border-radius:8px;padding:10px 12px;font:600 .95rem var(--f-body);cursor:pointer;min-height:42px}
+.gbtn.gold{background:var(--gold);color:var(--night)}
+.gbtn:focus-visible,.kk:focus-visible{outline:2px solid var(--gold)}
+.gbtn.tip{background:transparent;border:1px solid var(--gold);color:var(--gold)}
+.gmain{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:10px 0;overflow-y:auto}
+.hint{max-width:420px;text-align:center;color:var(--gold);font-style:italic;margin:0;min-height:1.2em;padding:0 8px}
+.board{display:grid;grid-template-rows:repeat(6,1fr);gap:6px;--t:min(15vw,9.2vh,62px)}
+.row{display:grid;grid-template-columns:repeat(5,var(--t));gap:6px}
+.tile{width:var(--t);height:var(--t);border:2px solid var(--line);border-radius:4px;display:grid;place-items:center;font:800 calc(var(--t)*.5) var(--f-body);color:var(--snow);background:transparent}
+.tile.filled{border-color:var(--muted);animation:pop .1s}
+@keyframes pop{50%{transform:scale(1.08)}}
+.tile.correct,.tile.present,.tile.absent{border-color:transparent}
+.tile.correct{background:var(--hit)} .tile.present{background:var(--near);color:var(--night)} .tile.absent{background:var(--miss)}
+.tile.flip{animation:flip .5s ease both}
+@keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+.kb{display:grid;gap:6px;width:100%;max-width:520px;margin:0 auto;padding:4px 0}
+.krow{display:flex;gap:5px;justify-content:center}
+.kk{flex:1;max-width:46px;height:52px;border:0;border-radius:6px;background:var(--key);color:var(--key-fg);font:600 1.1rem var(--f-body);cursor:pointer;padding:0;touch-action:manipulation}
+.kk.wide{max-width:84px;flex:1.7;font-size:.95rem}
+.kk.correct{background:var(--hit)} .kk.present{background:var(--near);color:var(--night)} .kk.absent{background:var(--miss);color:var(--muted)}
+.result{width:100%;max-width:420px;margin:0 auto;background:var(--night-2);border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center;display:grid;gap:10px}
+.result h3{margin:0;font-family:var(--f-display);font-size:2rem;color:var(--gold);font-weight:700}
+.result p{margin:0;line-height:1.45}
+.result .btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.result .sol{font-weight:800;letter-spacing:.15em;font-size:1.3rem}
+#toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:40;background:var(--snow);color:var(--night);font-weight:700;padding:10px 16px;border-radius:8px;max-width:calc(100% - 32px);text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+
+/* Dialoge */
+.dlg{position:fixed;inset:0;z-index:30;background:rgba(5,10,16,.8);display:grid;place-items:center;padding:16px}
+.hbox{background:var(--night-2);border:1px solid var(--line);border-radius:12px;max-width:440px;width:100%;max-height:100%;overflow:auto;padding:20px;display:grid;gap:12px}
+.hbox h3{margin:0;font-family:var(--f-display);color:var(--gold);font-size:2rem;font-weight:700}
+.hbox p{margin:0;line-height:1.5}
+.hbox input{width:100%;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--night);color:var(--snow);font:600 1.1rem var(--f-body)}
+.hbox input:focus{outline:2px solid var(--gold);border-color:transparent}
+.hbox .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.demo{display:flex;gap:5px;--t:40px}
+.demo .tile{font-size:1.2rem}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<canvas id="snow" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <header class="top">
+    <h1 id="title">Advents-Wördle</h1>
+    <p class="sub">Jeden Tag ein Türchen, hinter jedem Türchen ein Rätselwort.</p>
+    <div class="status" id="status"></div>
+  </header>
+  <main class="cal" id="cal" aria-label="Adventskalender"></main>
+  <div class="foot">
+    <button class="linkbtn" id="helpBtn" type="button">Wie wird gespielt?</button>
+    <span id="score"></span>
+    <button class="linkbtn" id="resetBtn" type="button" hidden>Vorschau zurücksetzen</button>
+  </div>
+
+  <section class="stats" id="stats" aria-label="Bestenliste">
+    <h2>Bestenliste</h2>
+    <div class="me-line" id="meLine"></div>
+    <div id="statsBody"><div class="panel"><p class="note">Bestenliste wird geladen …</p></div></div>
+  </section>
+</div>
+
+<section id="game" hidden aria-label="Rätsel">
+  <div class="gbar">
+    <button class="gbtn" id="back" type="button">← Kalender</button>
+    <h2 id="gtitle">Türchen</h2>
+    <button class="gbtn tip" id="tipBtn" type="button">Tipp</button>
+  </div>
+  <div class="gmain">
+    <p class="hint" id="hint"></p>
+    <div class="board" id="board"></div>
+    <div class="result" id="result" hidden></div>
+  </div>
+  <div class="kb" id="kb"></div>
+</section>
+
+<div id="help" class="dlg" hidden>
+  <div class="hbox" role="dialog" aria-label="Anleitung">
+    <h3>So geht's</h3>
+    <p>Errate das Wort mit <b>5 Buchstaben</b>. Du hast <b>6 Versuche</b>. Tippe ein Wort ein und drücke <b>Senden</b>.</p>
+    <div class="demo"><div class="tile absent">H</div><div class="tile correct">A</div><div class="tile absent">R</div><div class="tile present">F</div><div class="tile present">E</div></div>
+    <p><b style="color:var(--hit)">Grün:</b> Buchstabe steht an der richtigen Stelle.<br><b style="color:var(--near)">Gelb:</b> kommt im Wort vor, aber woanders.<br><b style="color:var(--muted)">Grau:</b> kommt nicht vor.</p>
+    <p>Ä, Ö, Ü und ß zählen als eigene Buchstaben. Wenn du nicht weiterkommst, hilft der Knopf <b>Tipp</b>.</p>
+    <p>Jeden Tag im Dezember öffnet sich ein neues Türchen, bis Heiligabend. Unten auf der Seite siehst du die <b>Bestenliste</b> mit allen, die mitraten.</p>
+    <div class="btns"><button class="gbtn gold" id="helpClose" type="button">Los geht's</button></div>
+  </div>
+</div>
+
+<div id="nameDlg" class="dlg" hidden>
+  <form class="hbox" id="nameForm" role="dialog" aria-label="Name für die Bestenliste">
+    <h3>Wer rät mit?</h3>
+    <p>Mit welchem Namen möchtest du in der Bestenliste stehen? Die anderen sehen ihn zusammen mit deinen Ergebnissen.</p>
+    <input id="nameIn" maxlength="20" autocomplete="nickname" placeholder="z. B. Gabi" required>
+    <div class="btns">
+      <button class="gbtn" id="nameSkip" type="button">Nur für mich spielen</button>
+      <button class="gbtn gold" type="submit">Speichern</button>
+    </div>
+  </form>
+</div>
+<div id="toast" hidden role="status"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+// ===================== HIER ANPASSEN =====================
+const APP_VERSION = "1.2.0";
+const NAME = "Mama";          // wird in Überschrift und Weihnachtsgruß verwendet
+const JAHR = 2026;            // Dezember dieses Jahres
+// Firebase-Zugangsdaten (Firebase-Konsole > Projekteinstellungen > Deine Apps > Web-App > Konfiguration)
+// Solange hier null steht, läuft der Kalender ohne Bestenliste.
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAzFTzRCh4ykrLt_13NPIwk1q_Ne9SVChU",
+  authDomain: "adventswoerdle.firebaseapp.com",
+  projectId: "adventswoerdle",
+  storageBucket: "adventswoerdle.firebasestorage.app",
+  messagingSenderId: "556811515515",
+  appId: "1:556811515515:web:473f96e74b37f3728d14de"
+};
+// 24 Wörter mit genau 5 Buchstaben (Ä/Ö/Ü/ß zählen als 1 Buchstabe) + Tipp
+const WOERTER = [
+  ["STERN","Leuchtet ganz oben auf der Baumspitze."],
+  ["KERZE","Am Adventskranz brennt jede Woche eine mehr."],
+  ["APFEL","Rotbackig, und er liegt gern im Nikolausstiefel."],
+  ["MÜTZE","Hält im Winter den Kopf warm."],
+  ["SOCKE","Gestrickt und dick, für kalte Füße."],
+  ["KRANZ","Aus Tannengrün, mit vier Kerzen darauf."],
+  ["HONIG","Süß, von Bienen gemacht, gehört in Lebkuchen."],
+  ["KUGEL","Hängt rund und glänzend am Weihnachtsbaum."],
+  ["TANNE","Der klassische Weihnachtsbaum."],
+  ["KAKAO","Heißes Getränk, gern mit Sahne obendrauf."],
+  ["FROST","Malt Eisblumen an die Fensterscheiben."],
+  ["SCHAL","Wird bei Kälte um den Hals gewickelt."],
+  ["LICHT","Am 13. Dezember ist Luciafest, das Fest des …"],
+  ["ORGEL","Das große Instrument in der Kirche."],
+  ["KAMIN","Hier knistert das Feuer."],
+  ["FLÖTE","Darauf lernen viele Kinder „Alle Jahre wieder“."],
+  ["WOLLE","Daraus strickt man Mützen und Socken."],
+  ["GLANZ","Was Lametta und Kugeln verbreiten."],
+  ["DECKE","Kuschelig auf dem Sofa an kalten Abenden."],
+  ["RODEL","Ein anderes Wort für Schlitten."],
+  ["KRONE","Tragen die Heiligen Drei Könige auf dem Kopf."],
+  ["GLÜCK","Schornsteinfeger sollen es bringen."],
+  ["ENGEL","Verkündete den Hirten die frohe Botschaft."],
+  ["LIEBE","Das Wichtigste an Heiligabend."]
+];
+// Reihenfolge der Türchen auf dem Kalender (gemischt wie bei einem echten Kalender)
+const REIHENFOLGE = [7,15,3,22,11,1,18,9,24,5,13,20,2,16,10,23,6,19,12,4,21,8,17,14];
+// Punkte: gelöst = 7 minus Versuche (1 Versuch = 6 Punkte … 6 Versuche = 1 Punkt), mit Tipp 1 Punkt weniger (mind. 1), nicht gelöst = 0
+// Vorschau für dich: Link mit #vorschau am Ende öffnet alle Türchen (Spielstände getrennt, nichts landet in der Bestenliste)
+// =========================================================
+
+const VORSCHAU = location.hash === "#vorschau";
+const KEY = (VORSCHAU ? "awoerdle-vorschau-" : "awoerdle-") + JAHR;
+const $ = id => document.getElementById(id);
+const letters = w => Array.from(w);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const CODE = {c:"correct", p:"present", a:"absent"};
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+let state = load(); // { "7": {guesses:[...], done:"won"|"lost", tip:true, zeit, muster}, seenHelp:true }
+
+function today(){ return new Date(); }
+function isOpen(d){ return VORSCHAU || today() >= new Date(JAHR, 11, d); }
+function todayDoor(){ const t=today(); return (t.getFullYear()===JAHR && t.getMonth()===11 && t.getDate()<=24) ? t.getDate() : 0; }
+
+function score(guess, target){
+  const g=letters(guess), t=letters(target), res=Array(5).fill("absent"), cnt={};
+  for(let i=0;i<5;i++){ if(g[i]===t[i]) res[i]="correct"; else cnt[t[i]]=(cnt[t[i]]||0)+1; }
+  for(let i=0;i<5;i++){ if(res[i]!=="correct" && cnt[g[i]]>0){ res[i]="present"; cnt[g[i]]--; } }
+  return res;
+}
+// Farbmuster eines Spiels als ["cpaaa", …] – ohne Buchstaben, damit nichts verraten wird
+function musterOf(d){
+  const s=state[d]; if(!s) return [];
+  if(s.guesses && s.guesses.length) return s.guesses.map(g=>score(g,WOERTER[d-1][0]).map(x=>x[0]).join(""));
+  return s.muster || [];
+}
+function triesOf(d){ return musterOf(d).length; }
+
+let toastT;
+function toast(msg, ms=1800){ const el=$("toast"); el.textContent=msg; el.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>el.hidden=true, ms); }
+
+// ---------- Kalender ----------
+function renderCal(){
+  $("title").textContent = NAME ? NAME + "s Advents-Wördle" : "Advents-Wördle";
+  const cal=$("cal"); cal.innerHTML="";
+  const td=todayDoor();
+  REIHENFOLGE.forEach(d=>{
+    const b=document.createElement("button"); b.type="button"; b.className="door"+(d===24?" d24":"");
+    const s=state[d]; const open=isOpen(d);
+    if(!open){ b.classList.add("locked"); b.innerHTML=`<span class="num">${d}</span><span class="lbl">ab ${d}.12.</span>`; b.setAttribute("aria-label",`Türchen ${d}, öffnet am ${d}. Dezember`); }
+    else if(s && s.done){ b.classList.add("done", s.done); b.innerHTML=`<span class="num">${d}</span><span class="word">${WOERTER[d-1][0]}</span>`; b.setAttribute("aria-label",`Türchen ${d}, fertig: ${WOERTER[d-1][0]}`); }
+    else { b.innerHTML=`<span class="num">${d}</span>`+(s&&s.guesses&&s.guesses.length?`<span class="lbl">angefangen</span>`:""); b.setAttribute("aria-label",`Türchen ${d} öffnen`); }
+    if(d===td && !(s&&s.done)) b.classList.add("today");
+    b.addEventListener("click",()=>{
+      if(!isOpen(d)){ b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake"); toast(`Noch ein bisschen Geduld! Türchen ${d} öffnet sich am ${d}. Dezember.`, 2400); return; }
+      openGame(d);
+    });
+    cal.appendChild(b);
+  });
+  const t=today(), first=new Date(JAHR,11,1);
+  let st;
+  if(VORSCHAU) st="<b>Vorschau:</b> alle Türchen offen";
+  else if(t<first){ const n=Math.ceil((first-t)/864e5); st=`Das erste Türchen öffnet sich am 1. Dezember, noch <b>${n} ${n===1?"Tag":"Tage"}</b>.`; }
+  else if(td) st=`Heute ist <b>Türchen ${td}</b> dran.`;
+  else st="Alle Türchen sind offen. Frohe Weihnachten!";
+  $("status").innerHTML=st;
+  let won=0,done=0; for(let d=1;d<=24;d++){ if(state[d]&&state[d].done){done++; if(state[d].done==="won") won++;} }
+  $("score").textContent = done ? `Du: ${won} von ${done} Rätseln gelöst` : "";
+  $("resetBtn").hidden=!VORSCHAU;
+}
+
+// ---------- Spiel ----------
+let cur=0, input=[], busy=false;
+function openGame(d){
+  cur=d; input=[]; busy=false;
+  if(!state[d]) state[d]={guesses:[]};
+  $("gtitle").textContent=`Türchen ${d}`;
+  $("hint").textContent = state[d].tip ? "Tipp: "+WOERTER[d-1][1] : "";
+  $("tipBtn").hidden = !!state[d].tip || !!state[d].done;
+  buildBoard(); buildKb(); paint(false);
+  $("game").hidden=false; document.body.style.overflow="hidden";
+}
+function closeGame(){ $("game").hidden=true; document.body.style.overflow=""; cur=0; renderCal(); renderStats(); }
+
+function buildBoard(){
+  const b=$("board"); b.innerHTML="";
+  for(let r=0;r<6;r++){ const row=document.createElement("div"); row.className="row"; for(let c=0;c<5;c++){ const t=document.createElement("div"); t.className="tile"; row.appendChild(t);} b.appendChild(row); }
+}
+const KB=[["Q","W","E","R","T","Z","U","I","O","P"],["A","S","D","F","G","H","J","K","L"],["Y","X","C","V","B","N","M"],["Senden","Ü","Ö","Ä","ß","←"]];
+function buildKb(){
+  const kb=$("kb"); kb.innerHTML="";
+  KB.forEach(r=>{ const row=document.createElement("div"); row.className="krow";
+    r.forEach(k=>{ const b=document.createElement("button"); b.type="button"; b.className="kk"+(k.length>1?" wide":""); b.textContent=k; b.dataset.k=k;
+      if(k==="←") b.setAttribute("aria-label","Löschen");
+      b.addEventListener("click",()=>press(k)); row.appendChild(b); });
+    kb.appendChild(row); });
+}
+function paint(animLast){
+  const s=state[cur], rows=$("board").children, keyState={}, rank={absent:1,present:2,correct:3};
+  const muster=musterOf(cur), hasLetters=s.guesses.length>0;
+  muster.forEach((m,ri)=>{
+    const res=letters(m).map(x=>CODE[x]), L=hasLetters?letters(s.guesses[ri]):["","","","",""];
+    [...rows[ri].children].forEach((t,i)=>{
+      t.textContent=L[i]; t.className="tile";
+      if(animLast && ri===muster.length-1){ t.style.animationDelay=(i*0.25)+"s"; t.classList.add("flip"); setTimeout(()=>t.classList.add(res[i]), i*250+250); }
+      else t.classList.add(res[i]);
+      if(L[i] && (!keyState[L[i]] || rank[res[i]]>rank[keyState[L[i]]])) keyState[L[i]]=res[i];
+    });
+  });
+  const ri=muster.length;
+  if(ri<6 && !s.done){ [...rows[ri].children].forEach((t,i)=>{ t.textContent=input[i]||""; t.className="tile"+(input[i]?" filled":""); }); }
+  const applyKeys=()=>document.querySelectorAll(".kk").forEach(b=>{ b.classList.remove("correct","present","absent"); if(keyState[b.dataset.k]) b.classList.add(keyState[b.dataset.k]); });
+  if(animLast) setTimeout(applyKeys,1500); else applyKeys();
+  if(s.done) setTimeout(showResult, animLast?1600:0); else { $("result").hidden=true; $("kb").hidden=false; }
+}
+function press(k){
+  if(busy || !cur || state[cur].done) return;
+  if(k==="←"||k==="Backspace"){ input.pop(); paint(false); return; }
+  if(k==="Senden"||k==="Enter"){ submit(); return; }
+  if(input.length<5){ input.push(k); paint(false); }
+}
+function submit(){
+  const s=state[cur], word=WOERTER[cur-1][0];
+  if(input.length<5){ const row=$("board").children[s.guesses.length]; row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake"); toast("Das Wort braucht 5 Buchstaben."); return; }
+  const g=input.join(""); s.guesses.push(g); input=[];
+  if(g===word) s.done="won"; else if(s.guesses.length>=6) s.done="lost";
+  if(s.done){ s.zeit=Date.now(); }
+  save(); busy=true; paint(true);
+  if(s.done) pushResult(cur);
+  setTimeout(()=>{ busy=false; if(s.done==="won") toast(["Wunderbar!","Großartig!","Sehr gut!","Prima!","Geschafft!","Puh, gerade noch!"][s.guesses.length-1]); }, 1500);
+}
+function showResult(){
+  const s=state[cur], word=WOERTER[cur-1][0], n=triesOf(cur), r=$("result");
+  $("kb").hidden=true; $("tipBtn").hidden=true;
+  let html;
+  if(s.done==="won") html=`<h3>Gelöst!</h3><p>Du hast <span class="sol">${word}</span> in ${n} ${n===1?"Versuch":"Versuchen"} erraten.</p>`;
+  else html=`<h3>Schade!</h3><p>Das gesuchte Wort war <span class="sol">${word}</span>.</p>`;
+  const others = Object.entries(players).filter(([id,p])=>id!==myId && p && p.name && p.tage && p.tage[cur]).length;
+  if(others) html+=`<p>${others} ${others===1?"andere hat":"andere haben"} dieses Türchen auch schon geschafft. Schau in die Bestenliste!</p>`;
+  if(cur===24) html+=`<p><b>Frohe Weihnachten${NAME?", "+esc(NAME):""}!</b> Danke fürs Mitraten im Advent.</p>`;
+  else html+=`<p>Morgen wartet das nächste Türchen.</p>`;
+  html+=`<div class="btns"><button class="gbtn" id="copyBtn" type="button">Ergebnis kopieren</button><button class="gbtn gold" id="back2" type="button">Zum Kalender</button></div>`;
+  r.innerHTML=html; r.hidden=false;
+  $("back2").onclick=()=>{ selDay=cur; closeGame(); };
+  $("copyBtn").onclick=()=>{
+    const grid=musterOf(cur).map(m=>letters(m).map(x=>x==="c"?"🟩":x==="p"?"🟨":"⬛").join("")).join("\n");
+    const txt=`Advents-Wördle Türchen ${cur}: ${s.done==="won"?n:"X"}/6\n${grid}`;
+    const ok=()=>toast("Kopiert! Jetzt z. B. in WhatsApp einfügen.",2200);
+    try{ navigator.clipboard.writeText(txt).then(ok,()=>toast("Kopieren hat nicht geklappt.")); }catch(e){ toast("Kopieren hat nicht geklappt."); }
+  };
+}
+
+// ---------- Bestenliste (gemeinsame Daten) ----------
+let db=null, myId=null, players={}, dbState="laden", readOnly=false, askedName=false, selDay=0, writeChain=Promise.resolve();
+
+function recordFor(d){ const s=state[d]; return { n:triesOf(d), won:s.done==="won", tip:!!s.tip, muster:musterOf(d), zeit:s.zeit||Date.now() }; }
+function canWrite(){ return db && myId && !VORSCHAU && !readOnly && players[myId] && players[myId].name; }
+function write(fn){
+  writeChain = writeChain.then(fn).catch(e=>{
+    if(e && (e.code==="permission-denied")){ readOnly=true; renderStats(); }
+    else toast("Ergebnis konnte nicht gespeichert werden.", 2400);
+  });
+}
+function pushResult(d){ if(!canWrite()) return; const rec=recordFor(d); write(()=>db.collection("spieler").doc(myId).set({tage:{[d]:rec}},{merge:true})); }
+function pushMissing(){
+  if(!canWrite()) return;
+  const have=players[myId].tage||{}, add={};
+  for(let d=1;d<=24;d++){ if(state[d]&&state[d].done&&!have[d]) add[d]=recordFor(d); }
+  if(Object.keys(add).length) write(()=>db.collection("spieler").doc(myId).set({tage:add},{merge:true}));
+}
+function mergeMine(){
+  if(VORSCHAU || !myId || !players[myId] || !players[myId].tage) return;
+  let changed=false;
+  Object.entries(players[myId].tage).forEach(([d,t])=>{
+    if(!(state[d]&&state[d].done) && t && Array.isArray(t.muster)){ state[d]={guesses:[], done:t.won?"won":"lost", tip:!!t.tip, muster:t.muster, zeit:t.zeit}; changed=true; }
+  });
+  if(changed){ save(); if(!cur) renderCal(); }
+}
+function setName(name){
+  name=name.trim().slice(0,20); if(!name) return;
+  const ref=db.collection("spieler").doc(myId);
+  write(()=>ref.set({name},{merge:true}));
+  // eigene Ergebnisse von vor der Anmeldung nachtragen
+  write(async()=>{ const add={}; for(let d=1;d<=24;d++){ if(state[d]&&state[d].done) add[d]=recordFor(d); } if(Object.keys(add).length) await ref.set({tage:add},{merge:true}); });
+}
+function maybeAskName(){
+  if(askedName || dbState!=="ok" || !myId || VORSCHAU || readOnly || !$("help").hidden) return;
+  if(players[myId] && players[myId].name) return;
+  askedName=true; $("nameIn").value=""; $("nameDlg").hidden=false; setTimeout(()=>$("nameIn").focus(),50);
+}
+
+async function initDb(){
+  if(!FIREBASE_CONFIG || !window.firebase){ dbState="aus"; renderStats(); return; }
+  const timer=setTimeout(()=>{ if(dbState==="laden"){ dbState="fehler"; renderStats(); } }, 10000);
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const cred=await firebase.auth().signInAnonymously();   // jedes Gerät bekommt eine feste, anonyme Kennung
+    myId=cred.user.uid; db=firebase.firestore();
+  }catch(e){ console.error(e); clearTimeout(timer); dbState="fehler"; renderStats(); return; }
+  db.collection("spieler").onSnapshot(snap=>{
+    clearTimeout(timer); dbState="ok"; players={};
+    snap.docs.forEach(doc=>{ const v=doc.data(); if(v) players[doc.id]=v; });
+    mergeMine(); pushMissing(); renderStats(); maybeAskName();
+  }, e=>{ console.error(e); clearTimeout(timer); dbState="fehler"; renderStats(); });
+}
+
+function playerStats(){
+  return Object.entries(players).filter(([,p])=>p && p.name).map(([id,p])=>{
+    const tage=Object.entries(p.tage||{}).filter(([d,t])=>t && +d>=1 && +d<=24);
+    let pts=0, won=0, sumN=0, tips=0; const wonDays=[];
+    tage.forEach(([d,t])=>{ if(t.tip) tips++; if(t.won){ won++; sumN+=t.n; wonDays.push(+d); pts+=Math.max(1,7-t.n-(t.tip?1:0)); } });
+    wonDays.sort((a,b)=>a-b); let best=0, run=0, prev=-9;
+    wonDays.forEach(d=>{ run=(d===prev+1)?run+1:1; best=Math.max(best,run); prev=d; });
+    return {id, name:String(p.name), played:tage.length, won, pts, avg:won?sumN/won:null, streak:best, tips, tage:Object.fromEntries(tage)};
+  }).sort((a,b)=> b.pts-a.pts || (a.avg??9)-(b.avg??9) || b.won-a.won || a.name.localeCompare(b.name));
+}
+function fmtAvg(x){ return x==null ? "–" : x.toFixed(1).replace(".",","); }
+function miniGrid(m){ return `<span class="mini" aria-hidden="true">${(m||[]).map(r=>`<i>${letters(String(r)).slice(0,5).map(x=>`<b class="${x==="c"?"c":x==="p"?"p":""}"></b>`).join("")}</i>`).join("")}</span>`; }
+
+function renderStats(){
+  const body=$("statsBody"), me=$("meLine");
+  me.innerHTML="";
+  if(dbState==="aus"){ body.innerHTML=`<div class="panel"><p class="note">Die Bestenliste gibt es nur in der geteilten Online-Version des Kalenders. Hier wird nur für dich allein gespielt.</p></div>`; return; }
+  if(dbState==="laden"){ body.innerHTML=`<div class="panel"><p class="note">Bestenliste wird geladen …</p></div>`; return; }
+  if(dbState==="fehler"){ body.innerHTML=`<div class="panel"><p class="note">Die Bestenliste ist gerade nicht erreichbar. Spielen geht trotzdem, deine Ergebnisse werden später nachgetragen.</p></div>`; return; }
+
+  // Kopfzeile: wer bin ich
+  if(VORSCHAU) me.innerHTML=`<span>Vorschau-Modus: deine Testspiele landen nicht in der Bestenliste.</span>`;
+  else if(readOnly) me.innerHTML=`<span>Du kannst zuschauen, aber deine Ergebnisse werden nicht eingetragen (keine Schreibberechtigung).</span>`;
+  else if(myId && players[myId] && players[myId].name){ me.innerHTML=`<span>Du spielst als <b></b></span><button class="linkbtn" type="button" id="renameBtn">Name ändern</button>`; me.querySelector("b").textContent=players[myId].name; $("renameBtn").onclick=()=>{ $("nameIn").value=players[myId].name; $("nameDlg").hidden=false; $("nameIn").focus(); }; }
+  else if(myId){ me.innerHTML=`<button class="linkbtn" type="button" id="joinBtn">In die Bestenliste eintragen</button>`; $("joinBtn").onclick=()=>{ $("nameIn").value=""; $("nameDlg").hidden=false; $("nameIn").focus(); }; }
+
+  const ps=playerStats();
+  if(!ps.length){ body.innerHTML=`<div class="panel"><p class="note">Noch hat niemand ein Türchen gelöst. Sobald die ersten Rätsel geschafft sind, steht hier, wer vorne liegt.</p></div>`; return; }
+
+  let html="";
+  // 1) Rangliste
+  html+=`<div class="panel"><h3>Rangliste</h3><div class="tablewrap"><table class="rank"><thead><tr><th>Platz</th><th>Name</th><th>Punkte</th><th>Gelöst</th><th>Ø Versuche</th></tr></thead><tbody>`;
+  let place=0, lastKey=null;
+  ps.forEach((p,i)=>{ const key=p.pts+"|"+p.avg; if(key!==lastKey){ place=i+1; lastKey=key; }
+    html+=`<tr class="${p.id===myId?"me":""}"><td><span class="place p${place<=3?place:""}">${place}</span></td><td>${esc(p.name)}${p.id===myId?" (du)":""}</td><td class="pts">${p.pts}</td><td>${p.won}/${p.played}</td><td>${fmtAvg(p.avg)}</td></tr>`; });
+  html+=`</tbody></table></div><p class="note">Punkte pro Türchen: in 1 Versuch 6 Punkte, in 2 Versuchen 5 … in 6 Versuchen 1 Punkt. Mit Tipp gibt es einen Punkt weniger, nicht gelöst zählt 0.</p></div>`;
+
+  // 2) Rekorde
+  const all=[]; ps.forEach(p=>Object.entries(p.tage).forEach(([d,t])=>all.push({p, d:+d, t})));
+  const recs=[];
+  const wins=all.filter(x=>x.t.won);
+  if(wins.length){
+    const b=wins.slice().sort((a,b)=>a.t.n-b.t.n || (a.t.zeit||0)-(b.t.zeit||0))[0];
+    recs.push(["Volltreffer", esc(b.p.name), `Türchen ${b.d} in nur ${b.t.n} ${b.t.n===1?"Versuch":"Versuchen"}`]);
+  }
+  const perDay={}; all.forEach(x=>{ (perDay[x.d]=perDay[x.d]||[]).push(x.t.won?x.t.n:7); });
+  const dayAvg=Object.entries(perDay).map(([d,a])=>({d:+d, avg:a.reduce((s,v)=>s+v,0)/a.length, n:a.length}));
+  if(dayAvg.length>=2){
+    const hard=dayAvg.slice().sort((a,b)=>b.avg-a.avg)[0], easy=dayAvg.slice().sort((a,b)=>a.avg-b.avg)[0];
+    recs.push(["Härteste Nuss", `Türchen ${hard.d}`, `im Schnitt ${fmtAvg(Math.min(hard.avg,6.9))} Versuche`+(perDay[hard.d].includes(7)?", nicht alle haben es geschafft":"")]);
+    recs.push(["Leichtestes Türchen", `Türchen ${easy.d}`, `im Schnitt ${fmtAvg(easy.avg)} Versuche`]);
+  }
+  const streak=ps.slice().sort((a,b)=>b.streak-a.streak)[0];
+  if(streak && streak.streak>=2) recs.push(["Längste Serie", esc(streak.name), `${streak.streak} Türchen am Stück gelöst`]);
+  const early=wins.filter(x=>x.t.zeit).map(x=>{ const z=new Date(x.t.zeit); return {x, min:z.getHours()*60+z.getMinutes(), z}; }).sort((a,b)=>a.min-b.min)[0];
+  if(early) recs.push(["Früher Vogel", esc(early.x.p.name), `hat Türchen ${early.x.d} schon um ${early.z.getHours()}:${String(early.z.getMinutes()).padStart(2,"0")} Uhr gelöst`]);
+  const noTip=ps.filter(p=>p.won>=3 && p.tips===0).sort((a,b)=>b.won-a.won)[0];
+  if(noTip) recs.push(["Ganz ohne Tipp", esc(noTip.name), `${noTip.won} Rätsel gelöst, kein einziger Tipp`]);
+  if(recs.length) html+=`<div class="panel"><h3>Rekorde</h3><div class="recs">${recs.map(r=>`<div class="rec"><span class="k">${r[0]}</span><span class="v">${r[1]}</span><span class="d">${r[2]}</span></div>`).join("")}</div></div>`;
+
+  // 3) Verteilung der Versuche
+  const dist=[0,0,0,0,0,0,0]; all.forEach(x=>{ dist[x.t.won?Math.min(6,Math.max(1,x.t.n))-1:6]++; });
+  const max=Math.max(...dist,1), topI=dist.indexOf(Math.max(...dist));
+  html+=`<div class="panel"><h3>So viele Versuche wurden gebraucht</h3><div class="dist">${dist.map((v,i)=>`<div class="bar${i===topI&&v?" top":""}"><span style="background:none;padding:0;min-width:0;text-align:left">${i<6?i+1:"X"}</span><span style="width:${Math.max(8,v/max*100)}%">${v}</span></div>`).join("")}</div><p class="note">Alle ${all.length} gespielten Rätsel aller Mitspielerinnen und Mitspieler. X = nicht gelöst.</p></div>`;
+
+  // 4) Türchen im Vergleich
+  const openDays=[]; for(let d=1;d<=24;d++) if(isOpen(d) || perDay[d]) openDays.push(d);
+  if(!openDays.includes(selDay)) selDay = openDays.includes(todayDoor()) ? todayDoor() : (openDays[openDays.length-1]||0);
+  if(openDays.length){
+    html+=`<div class="panel"><h3>Türchen im Vergleich</h3><div class="chips">`+
+      openDays.map(d=>`<button type="button" class="chip${d===selDay?" sel":""}" data-day="${d}" aria-pressed="${d===selDay}">${d}</button>`).join("")+`</div><div id="dayBox"></div></div>`;
+  }
+  body.innerHTML=html;
+  body.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ selDay=+c.dataset.day; renderStats(); });
+  if(openDays.length) renderDay(ps);
+}
+function renderDay(ps){
+  const box=$("dayBox"); if(!box) return; const d=selDay;
+  const rows=ps.filter(p=>p.tage[d]).map(p=>({p,t:p.tage[d]})).sort((a,b)=>(b.t.won-a.t.won)||(a.t.n-b.t.n)||((a.t.zeit||0)-(b.t.zeit||0)));
+  const mine=state[d]&&state[d].done;
+  if(!rows.length){ box.innerHTML=`<p class="daysum">Bei Türchen ${d} hat noch niemand mitgemacht.</p>`; return; }
+  const solved=rows.filter(r=>r.t.won).length;
+  let html=`<p class="daysum">Türchen ${d}: <b>${solved} von ${rows.length}</b> haben das Wort gefunden.</p>`;
+  if(!mine && !VORSCHAU){ box.innerHTML=html+`<p class="note">Löse das Türchen zuerst selbst, dann siehst du hier, wie die anderen abgeschnitten haben.</p>`; return; }
+  html+=`<div class="dayrows">`+rows.map(r=>`<div class="dayrow"><span class="nm">${esc(r.p.name)}${r.p.id===myId?" (du)":""}</span>${miniGrid(r.t.muster)}<span class="res">${r.t.won?`<b>${r.t.n}</b> ${r.t.n===1?"Versuch":"Versuche"}`:"nicht gelöst"}${r.t.tip?"<br>mit Tipp":""}</span></div>`).join("")+`</div>`;
+  box.innerHTML=html;
+}
+
+// ---------- Bedienung ----------
+$("back").onclick=closeGame;
+$("tipBtn").onclick=()=>{ state[cur].tip=true; save(); $("hint").textContent="Tipp: "+WOERTER[cur-1][1]; $("tipBtn").hidden=true; };
+document.addEventListener("keydown",e=>{
+  if(!$("nameDlg").hidden) return;
+  if(!$("help").hidden){ if(e.key==="Escape"||e.key==="Enter"){ closeHelp(); } return; }
+  if(!cur || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(e.key==="Escape"){ closeGame(); return; }
+  if(e.key==="Enter"||e.key==="Backspace"){ e.preventDefault(); press(e.key); return; }
+  if(/^[a-zäöüß]$/i.test(e.key)){ press(e.key==="ß"?"ß":e.key.toUpperCase()); }
+});
+function closeHelp(){ $("help").hidden=true; state.seenHelp=true; save(); maybeAskName(); }
+$("helpBtn").onclick=()=>$("help").hidden=false;
+$("helpClose").onclick=closeHelp;
+$("nameForm").addEventListener("submit",e=>{ e.preventDefault(); const v=$("nameIn").value.trim(); if(!v) return; $("nameDlg").hidden=true; setName(v); toast("Willkommen in der Bestenliste, "+v.slice(0,20)+"!",2200); });
+$("nameSkip").onclick=()=>{ $("nameDlg").hidden=true; };
+$("resetBtn").onclick=()=>{ state={seenHelp:true}; save(); renderCal(); renderStats(); toast("Vorschau zurückgesetzt."); };
+window.addEventListener("hashchange",()=>location.reload());
+
+renderCal(); renderStats();
+if(!state.seenHelp) $("help").hidden=false;
+initDb();
+setInterval(()=>{ if(!cur){ renderCal(); } }, 60000); // springt um Mitternacht von selbst weiter
+
+// ---------- Schnee ----------
+(function(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c=$("snow"), x=c.getContext("2d"); let W,H,f=[];
+  const size=()=>{ W=c.width=innerWidth; H=c.height=innerHeight; f=Array.from({length:Math.min(90,Math.floor(W/12))},()=>({x:Math.random()*W,y:Math.random()*H,r:Math.random()*2+.6,s:Math.random()*.5+.25,w:Math.random()*Math.PI*2})); };
+  size(); addEventListener("resize",size);
+  (function tick(){ x.clearRect(0,0,W,H); x.fillStyle="rgba(244,241,234,.75)";
+    f.forEach(p=>{ p.y+=p.s; p.w+=.01; p.x+=Math.sin(p.w)*.3; if(p.y>H){p.y=-4;p.x=Math.random()*W;} x.beginPath(); x.arc(p.x,p.y,p.r,0,7); x.fill(); });
+    requestAnimationFrame(tick); })();
+})();
+</script>
+
+</body>
+</html>

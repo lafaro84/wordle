@@ -205,7 +205,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ===================== HIER ANPASSEN =====================
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const NAME = "Mama";          // wird in Überschrift und Weihnachtsgruß verwendet
 const JAHR = 2026;            // Dezember dieses Jahres
 // Firebase-Zugangsdaten (Firebase-Konsole > Projekteinstellungen > Deine Apps > Web-App > Konfiguration)
@@ -248,11 +248,13 @@ const WOERTER = [
 // Reihenfolge der Türchen auf dem Kalender (gemischt wie bei einem echten Kalender)
 const REIHENFOLGE = [7,15,3,22,11,1,18,9,24,5,13,20,2,16,10,23,6,19,12,4,21,8,17,14];
 // Punkte: gelöst = 7 minus Versuche (1 Versuch = 6 Punkte … 6 Versuche = 1 Punkt), mit Tipp 1 Punkt weniger (mind. 1), nicht gelöst = 0
+// Demo: Link mit #demo zeigt eine ausgedachte Bestenliste mit 10 Personen (nichts wird gespeichert)
 // Vorschau für dich: Link mit #vorschau am Ende öffnet alle Türchen (Spielstände getrennt, nichts landet in der Bestenliste)
 // =========================================================
 
-const VORSCHAU = location.hash === "#vorschau";
-const KEY = (VORSCHAU ? "awoerdle-vorschau-" : "awoerdle-") + JAHR;
+const DEMO = location.hash === "#demo";
+const VORSCHAU = location.hash === "#vorschau" || DEMO;
+const KEY = (DEMO ? "awoerdle-demo-" : VORSCHAU ? "awoerdle-vorschau-" : "awoerdle-") + JAHR;
 const $ = id => document.getElementById(id);
 const letters = w => Array.from(w);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -303,7 +305,8 @@ function renderCal(){
   });
   const t=today(), first=new Date(JAHR,11,1);
   let st;
-  if(VORSCHAU) st="<b>Vorschau:</b> alle Türchen offen";
+  if(DEMO) st="<b>Demo:</b> so sieht es an Heiligabend aus";
+  else if(VORSCHAU) st="<b>Vorschau:</b> alle Türchen offen";
   else if(t<first){ const n=Math.ceil((first-t)/864e5); st=`Das erste Türchen öffnet sich am 1. Dezember, noch <b>${n} ${n===1?"Tag":"Tage"}</b>.`; }
   else if(td) st=`Heute ist <b>Türchen ${td}</b> dran.`;
   else st="Alle Türchen sind offen. Frohe Weihnachten!";
@@ -448,6 +451,24 @@ async function initDb(){
   }, e=>{ console.error(e); clearTimeout(timer); dbState="fehler"; renderStats(); });
 }
 
+function loadDemo(){
+  let seed=24; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  const names=["Mama","Gabi","Renate","Ute","Petra","Sabine","Monika","Karin","Heike","Brigitte"];
+  const row=(k)=>Array.from({length:5},(_,i)=>i<k?"c":(rnd()<.35?"p":"a")).sort(()=>rnd()-.5).join("");
+  players={};
+  names.forEach((name,i)=>{
+    const skill=.25+rnd()*.6, tage={};
+    for(let d=1;d<=24;d++){
+      if(i>0 && rnd()<.15) continue;                     // nicht jede spielt jeden Tag
+      let n=1; while(n<7 && rnd()>skill*.55+.08*n) n++;   // gebrauchte Versuche
+      const won=n<=6, tries=won?n:6, muster=[];
+      for(let t=0;t<tries;t++) muster.push(won&&t===tries-1?"ccccc":row(Math.min(4,Math.floor(t*1.2+rnd()*1.5))));
+      tage[d]={n:tries, won, tip:rnd()<.15, muster, zeit:new Date(JAHR,11,d,6+Math.floor(rnd()*17),Math.floor(rnd()*60)).getTime()};
+    }
+    players["demo"+i]={name, tage};
+  });
+  myId="demo0"; dbState="ok"; selDay=24; renderStats();
+}
 function playerStats(){
   return Object.entries(players).filter(([,p])=>p && p.name).map(([id,p])=>{
     const tage=Object.entries(p.tage||{}).filter(([d,t])=>t && +d>=1 && +d<=24);
@@ -469,7 +490,8 @@ function renderStats(){
   if(dbState==="fehler"){ body.innerHTML=`<div class="panel"><p class="note">Die Bestenliste ist gerade nicht erreichbar. Spielen geht trotzdem, deine Ergebnisse werden später nachgetragen.</p></div>`; return; }
 
   // Kopfzeile: wer bin ich
-  if(VORSCHAU) me.innerHTML=`<span>Vorschau-Modus: deine Testspiele landen nicht in der Bestenliste.</span>`;
+  if(DEMO) me.innerHTML=`<span>Demo: ausgedachte Bestenliste mit 10 Personen, nichts davon ist echt.</span>`;
+  else if(VORSCHAU) me.innerHTML=`<span>Vorschau-Modus: deine Testspiele landen nicht in der Bestenliste.</span>`;
   else if(readOnly) me.innerHTML=`<span>Du kannst zuschauen, aber deine Ergebnisse werden nicht eingetragen (keine Schreibberechtigung).</span>`;
   else if(myId && players[myId] && players[myId].name){ me.innerHTML=`<span>Du spielst als <b></b></span><button class="linkbtn" type="button" id="renameBtn">Name ändern</button>`; me.querySelector("b").textContent=players[myId].name; $("renameBtn").onclick=()=>{ $("nameIn").value=players[myId].name; $("nameDlg").hidden=false; $("nameIn").focus(); }; }
   else if(myId){ me.innerHTML=`<button class="linkbtn" type="button" id="joinBtn">In die Bestenliste eintragen</button>`; $("joinBtn").onclick=()=>{ $("nameIn").value=""; $("nameDlg").hidden=false; $("nameIn").focus(); }; }
@@ -557,7 +579,7 @@ window.addEventListener("hashchange",()=>location.reload());
 
 renderCal(); renderStats();
 if(!state.seenHelp) $("help").hidden=false;
-initDb();
+DEMO ? loadDemo() : initDb();
 setInterval(()=>{ if(!cur){ renderCal(); } }, 60000); // springt um Mitternacht von selbst weiter
 
 // ---------- Schnee ----------

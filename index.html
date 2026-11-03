@@ -91,6 +91,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 .mini b.c{background:var(--hit)} .mini b.p{background:var(--near)}
 .daysum{margin:0;font-size:.95rem}
 .daysum b{color:var(--gold)}
+.len{margin:0;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.8rem}
 .tipzone{display:flex;justify-content:center;min-height:40px}
 .tipbtn{border:1px solid var(--gold);background:transparent;color:var(--gold);border-radius:999px;padding:8px 20px;font:700 .95rem var(--f-body);cursor:pointer;min-height:40px}
 .tipbtn:disabled{border-color:var(--line);color:var(--muted);cursor:default}
@@ -177,6 +178,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
     <button class="gbtn" id="gHelp" type="button" aria-label="Anleitung">?</button>
   </div>
   <div class="gmain">
+    <p class="len" id="len"></p>
     <p class="hint" id="hint"></p>
     <div class="tipzone"><button class="tipbtn" id="tipBtn" type="button" disabled>Tipp</button></div>
     <div class="tipask" id="tipAsk" hidden>
@@ -192,7 +194,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <div id="help" class="dlg" hidden>
   <div class="hbox" role="dialog" aria-label="Anleitung">
     <h3>So geht's</h3>
-    <p>Errate das Wort mit <b>5 Buchstaben</b>. Du hast <b>6 Versuche</b>. Tippe ein Wort ein und drücke <b>Senden</b>.</p>
+    <p>Errate das gesuchte Wort. Es hat <b>4 bis 7 Buchstaben</b>, wie viele, steht über dem Spielfeld. Du hast <b>6 Versuche</b>. Tippe ein Wort ein und drücke <b>Senden</b>.</p>
     <div class="demo"><div class="tile absent">H</div><div class="tile correct">A</div><div class="tile absent">R</div><div class="tile present">F</div><div class="tile present">E</div></div>
     <p><b style="color:var(--hit)">Grün:</b> Buchstabe steht an der richtigen Stelle.<br><b style="color:var(--near)">Gelb:</b> kommt im Wort vor, aber woanders.<br><b style="color:var(--muted)">Grau:</b> kommt nicht vor.</p>
     <p>Ä, Ö, Ü und ß zählen als eigene Buchstaben. Ab dem 3. Fehlversuch kannst du einen <b>Tipp</b> aufdecken, das kostet aber einen Punkt.</p>
@@ -219,7 +221,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ===================== HIER ANPASSEN =====================
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 const NAME = "Mama";          // wird in Überschrift und Weihnachtsgruß verwendet
 const JAHR = 2026;            // Dezember dieses Jahres
 // Firebase-Zugangsdaten (Firebase-Konsole > Projekteinstellungen > Deine Apps > Web-App > Konfiguration)
@@ -232,29 +234,29 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "556811515515",
   appId: "1:556811515515:web:473f96e74b37f3728d14de"
 };
-// 24 Wörter mit genau 5 Buchstaben (Ä/Ö/Ü/ß zählen als 1 Buchstabe) + Tipp
+// 24 Wörter mit 4 bis 7 Buchstaben (Ä/Ö/Ü/ß zählen als 1 Buchstabe) + Tipp
 const WOERTER = [
+  ["ADVENT","Bedeutet übersetzt „Ankunft“."],
   ["DOCHT","Ohne ihn brennt keine Kerze."],
-  ["NELKE","Gewürz, das man in Orangen steckt."],
-  ["STROH","Daraus bastelt man Sterne für den Baum."],
-  ["ZWEIG","Heute ist Barbaratag: Man schneidet ihn vom Kirschbaum."],
-  ["KLAMM","So fühlen sich die Finger nach dem Schneeschippen an."],
+  ["STROH","Daraus bastelt man Sterne, und darauf lag das Kind."],
+  ["BARBARA","Heilige des heutigen Tages, ihr zu Ehren schneidet man Kirschzweige."],
   ["MITRA","Die hohe Mütze des heiligen Nikolaus."],
-  ["WACHS","Tropft von der Kerze auf die Tischdecke."],
+  ["MYRA","Hier war der heilige Nikolaus Bischof."],
+  ["HERODES","König, der die Weisen nach dem Kind ausfragte."],
   ["PSALM","Eins von 150 Liedgebeten im Alten Testament."],
-  ["NADEL","Fällt vom Baum und steckt dann im Teppich."],
+  ["ZION","„Tochter …, freue dich!“"],
   ["HYMNE","Feierlicher Lobgesang."],
   ["KOMET","Hat einen Schweif und wird gern über die Krippe gemalt."],
-  ["LIKÖR","Mit Ei wird er gelb und cremig."],
+  ["GLORIA","„… in excelsis Deo“, so sangen die Engel."],
   ["LUCIA","Heilige mit Lichterkranz auf dem Kopf, ihr Fest ist heute."],
   ["ALTAR","Darauf stehen in der Kirche Kerzen und Kreuz."],
   ["HIRTE","Hütete nachts auf dem Feld die Schafe."],
   ["BOGEN","Erzgebirgischer Lichterschmuck fürs Fenster: Schwib…"],
-  ["WIEGE","Das Kind im Stall hatte keine richtige …"],
+  ["WINDEL","Darin wickelte Maria das Neugeborene."],
   ["WEISE","Kam mit zwei anderen aus dem Morgenland und folgte dem Stern."],
   ["SEGEN","Die Sternsinger schreiben ihn mit Kreide an die Tür."],
   ["LUKAS","Von ihm stammt die bekannteste Weihnachtsgeschichte."],
-  ["NEBEL","Liegt am kürzesten Tag des Jahres oft grau über den Feldern."],
+  ["THOMAS","Apostel, dessen Gedenktag früher heute gefeiert wurde."],
   ["OCHSE","Stand neben dem Esel im Stall."],
   ["JOSEF","Zimmermann aus Nazaret."],
   ["METTE","Gottesdienst in der Heiligen Nacht: Christ…"]
@@ -271,6 +273,7 @@ const VORSCHAU = location.hash === "#vorschau" || DEMO;
 const KEY = (DEMO ? "awoerdle-demo-" : VORSCHAU ? "awoerdle-vorschau-" : "awoerdle-") + JAHR;
 const $ = id => document.getElementById(id);
 const letters = w => Array.from(w);
+const lenOf = d => letters(WOERTER[d-1][0]).length;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CODE = {c:"correct", p:"present", a:"absent"};
 
@@ -283,9 +286,9 @@ function isOpen(d){ return VORSCHAU || today() >= new Date(JAHR, 11, d); }
 function todayDoor(){ const t=today(); return (t.getFullYear()===JAHR && t.getMonth()===11 && t.getDate()<=24) ? t.getDate() : 0; }
 
 function score(guess, target){
-  const g=letters(guess), t=letters(target), res=Array(5).fill("absent"), cnt={};
-  for(let i=0;i<5;i++){ if(g[i]===t[i]) res[i]="correct"; else cnt[t[i]]=(cnt[t[i]]||0)+1; }
-  for(let i=0;i<5;i++){ if(res[i]!=="correct" && cnt[g[i]]>0){ res[i]="present"; cnt[g[i]]--; } }
+  const g=letters(guess), t=letters(target), L=t.length, res=Array(L).fill("absent"), cnt={};
+  for(let i=0;i<L;i++){ if(g[i]===t[i]) res[i]="correct"; else cnt[t[i]]=(cnt[t[i]]||0)+1; }
+  for(let i=0;i<L;i++){ if(res[i]!=="correct" && cnt[g[i]]>0){ res[i]="present"; cnt[g[i]]--; } }
   return res;
 }
 // Farbmuster eines Spiels als ["cpaaa", …] – ohne Buchstaben, damit nichts verraten wird
@@ -336,6 +339,7 @@ function openGame(d){
   cur=d; input=[]; busy=false;
   if(!state[d]) state[d]={guesses:[]};
   $("gtitle").textContent=`Türchen ${d}`;
+  $("len").textContent=`Gesucht: Wort mit ${lenOf(d)} Buchstaben`;
   $("hint").textContent = state[d].tip ? "Tipp: "+WOERTER[d-1][1] : "";
   buildBoard(); buildKb(); paint(false);
   $("game").hidden=false; document.body.style.overflow="hidden";
@@ -343,8 +347,9 @@ function openGame(d){
 function closeGame(){ $("game").hidden=true; document.body.style.overflow=""; cur=0; renderCal(); renderStats(); }
 
 function buildBoard(){
-  const b=$("board"); b.innerHTML="";
-  for(let r=0;r<6;r++){ const row=document.createElement("div"); row.className="row"; for(let c=0;c<5;c++){ const t=document.createElement("div"); t.className="tile"; row.appendChild(t);} b.appendChild(row); }
+  const b=$("board"), L=lenOf(cur); b.innerHTML="";
+  b.style.setProperty("--t", `min(${Math.floor(80/L)}vw, calc((100dvh - 470px) / 6), 60px)`);
+  for(let r=0;r<6;r++){ const row=document.createElement("div"); row.className="row"; row.style.gridTemplateColumns=`repeat(${L},var(--t))`; for(let c=0;c<L;c++){ const t=document.createElement("div"); t.className="tile"; row.appendChild(t);} b.appendChild(row); }
 }
 const KB=[["Q","W","E","R","T","Z","U","I","O","P"],["A","S","D","F","G","H","J","K","L"],["Y","X","C","V","B","N","M"],["Senden","Ü","Ö","Ä","ß","←"]];
 function buildKb(){
@@ -359,7 +364,7 @@ function paint(animLast){
   const s=state[cur], rows=$("board").children, keyState={}, rank={absent:1,present:2,correct:3};
   const muster=musterOf(cur), hasLetters=s.guesses.length>0;
   muster.forEach((m,ri)=>{
-    const res=letters(m).map(x=>CODE[x]), L=hasLetters?letters(s.guesses[ri]):["","","","",""];
+    const res=letters(m).map(x=>CODE[x]), L=hasLetters?letters(s.guesses[ri]):Array(lenOf(cur)).fill("");
     [...rows[ri].children].forEach((t,i)=>{
       t.textContent=L[i]; t.className="tile";
       if(animLast && ri===muster.length-1){ t.style.animationDelay=(i*0.25)+"s"; t.classList.add("flip"); setTimeout(()=>t.classList.add(res[i]), i*250+250); }
@@ -370,25 +375,26 @@ function paint(animLast){
   const ri=muster.length;
   if(ri<6 && !s.done){ [...rows[ri].children].forEach((t,i)=>{ t.textContent=input[i]||""; t.className="tile"+(input[i]?" filled":""); }); }
   const applyKeys=()=>document.querySelectorAll(".kk").forEach(b=>{ b.classList.remove("correct","present","absent"); if(keyState[b.dataset.k]) b.classList.add(keyState[b.dataset.k]); });
-  if(animLast) setTimeout(applyKeys,1500); else applyKeys();
-  if(s.done) setTimeout(showResult, animLast?1600:0); else { $("result").hidden=true; $("kb").hidden=false; }
+  const T=lenOf(cur)*250+300;
+  if(animLast) setTimeout(applyKeys,T); else applyKeys();
+  if(s.done) setTimeout(showResult, animLast?T+100:0); else { $("result").hidden=true; $("kb").hidden=false; }
   updateTip();
 }
 function press(k){
   if(busy || !cur || state[cur].done) return;
   if(k==="←"||k==="Backspace"){ input.pop(); paint(false); return; }
   if(k==="Senden"||k==="Enter"){ submit(); return; }
-  if(input.length<5){ input.push(k); paint(false); }
+  if(input.length<lenOf(cur)){ input.push(k); paint(false); }
 }
 function submit(){
   const s=state[cur], word=WOERTER[cur-1][0];
-  if(input.length<5){ const row=$("board").children[s.guesses.length]; row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake"); toast("Das Wort braucht 5 Buchstaben."); return; }
+  if(input.length<lenOf(cur)){ const row=$("board").children[s.guesses.length]; row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake"); toast(`Das Wort braucht ${lenOf(cur)} Buchstaben.`); return; }
   const g=input.join(""); s.guesses.push(g); input=[];
   if(g===word) s.done="won"; else if(s.guesses.length>=6) s.done="lost";
   if(s.done){ s.zeit=Date.now(); }
   save(); busy=true; paint(true);
   if(s.done) pushResult(cur);
-  setTimeout(()=>{ busy=false; if(s.done==="won") toast(["Wunderbar!","Großartig!","Sehr gut!","Prima!","Geschafft!","Puh, gerade noch!"][s.guesses.length-1]); }, 1500);
+  setTimeout(()=>{ busy=false; if(s.done==="won") toast(["Wunderbar!","Großartig!","Sehr gut!","Prima!","Geschafft!","Puh, gerade noch!"][s.guesses.length-1]); }, lenOf(cur)*250+300);
 }
 function showResult(){
   const s=state[cur], word=WOERTER[cur-1][0], n=triesOf(cur), r=$("result");
@@ -468,7 +474,7 @@ async function initDb(){
 function loadDemo(){
   let seed=24; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
   const names=["Mama","Gabi","Renate","Ute","Petra","Sabine","Monika","Karin","Heike","Brigitte"];
-  const row=(k)=>Array.from({length:5},(_,i)=>i<k?"c":(rnd()<.35?"p":"a")).sort(()=>rnd()-.5).join("");
+  const row=(k,L)=>Array.from({length:L},(_,i)=>i<k?"c":(rnd()<.35?"p":"a")).sort(()=>rnd()-.5).join("");
   players={};
   names.forEach((name,i)=>{
     const skill=.25+rnd()*.6, tage={};
@@ -476,7 +482,7 @@ function loadDemo(){
       if(i>0 && rnd()<.15) continue;                     // nicht jede spielt jeden Tag
       let n=1; while(n<7 && rnd()>skill*.55+.08*n) n++;   // gebrauchte Versuche
       const won=n<=6, tries=won?n:6, muster=[];
-      for(let t=0;t<tries;t++) muster.push(won&&t===tries-1?"ccccc":row(Math.min(4,Math.floor(t*1.2+rnd()*1.5))));
+      for(let t=0;t<tries;t++) muster.push(won&&t===tries-1?"c".repeat(lenOf(d)):row(Math.min(lenOf(d)-1,Math.floor(t*1.2+rnd()*1.5)),lenOf(d)));
       tage[d]={n:tries, won, tip:tries>=4&&rnd()<.35, muster, zeit:new Date(JAHR,11,d,6+Math.floor(rnd()*17),Math.floor(rnd()*60)).getTime()};
     }
     players["demo"+i]={name, tage};
@@ -494,7 +500,7 @@ function playerStats(){
   }).sort((a,b)=> b.pts-a.pts || (a.avg??9)-(b.avg??9) || b.won-a.won || a.name.localeCompare(b.name));
 }
 function fmtAvg(x){ return x==null ? "–" : x.toFixed(1).replace(".",","); }
-function miniGrid(m){ return `<span class="mini" aria-hidden="true">${(m||[]).map(r=>`<i>${letters(String(r)).slice(0,5).map(x=>`<b class="${x==="c"?"c":x==="p"?"p":""}"></b>`).join("")}</i>`).join("")}</span>`; }
+function miniGrid(m){ return `<span class="mini" aria-hidden="true">${(m||[]).map(r=>`<i>${letters(String(r)).slice(0,7).map(x=>`<b class="${x==="c"?"c":x==="p"?"p":""}"></b>`).join("")}</i>`).join("")}</span>`; }
 
 function renderStats(){
   const body=$("statsBody"), me=$("meLine");

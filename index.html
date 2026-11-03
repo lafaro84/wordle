@@ -91,6 +91,8 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 .mini b.c{background:var(--hit)} .mini b.p{background:var(--near)}
 .daysum{margin:0;font-size:.95rem}
 .daysum b{color:var(--gold)}
+.tipbadge{display:inline-block;margin-top:3px;padding:1px 7px;border:1px solid var(--gold);border-radius:999px;color:var(--gold);font-size:.72rem;font-weight:800;letter-spacing:.04em}
+.rank .tips{color:var(--gold);font-weight:700}
 
 /* Spiel-Ebene */
 #game{position:fixed;inset:0;z-index:5;background:var(--night);display:flex;flex-direction:column;
@@ -205,7 +207,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ===================== HIER ANPASSEN =====================
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.4.0";
 const NAME = "Mama";          // wird in Überschrift und Weihnachtsgruß verwendet
 const JAHR = 2026;            // Dezember dieses Jahres
 // Firebase-Zugangsdaten (Firebase-Konsole > Projekteinstellungen > Deine Apps > Web-App > Konfiguration)
@@ -501,10 +503,10 @@ function renderStats(){
 
   let html="";
   // 1) Rangliste
-  html+=`<div class="panel"><h3>Rangliste</h3><div class="tablewrap"><table class="rank"><thead><tr><th>Platz</th><th>Name</th><th>Punkte</th><th>Gelöst</th><th>Ø Versuche</th></tr></thead><tbody>`;
+  html+=`<div class="panel"><h3>Rangliste</h3><div class="tablewrap"><table class="rank"><thead><tr><th>Platz</th><th>Name</th><th>Punkte</th><th>Gelöst</th><th>Ø Versuche</th><th>Tipps</th></tr></thead><tbody>`;
   let place=0, lastKey=null;
   ps.forEach((p,i)=>{ const key=p.pts+"|"+p.avg; if(key!==lastKey){ place=i+1; lastKey=key; }
-    html+=`<tr class="${p.id===myId?"me":""}"><td><span class="place p${place<=3?place:""}">${place}</span></td><td>${esc(p.name)}${p.id===myId?" (du)":""}</td><td class="pts">${p.pts}</td><td>${p.won}/${p.played}</td><td>${fmtAvg(p.avg)}</td></tr>`; });
+    html+=`<tr class="${p.id===myId?"me":""}"><td><span class="place p${place<=3?place:""}">${place}</span></td><td>${esc(p.name)}${p.id===myId?" (du)":""}</td><td class="pts">${p.pts}</td><td>${p.won}/${p.played}</td><td>${fmtAvg(p.avg)}</td><td class="${p.tips?"tips":""}">${p.tips||"–"}</td></tr>`; });
   html+=`</tbody></table></div><p class="note">Punkte pro Türchen: in 1 Versuch 6 Punkte, in 2 Versuchen 5 … in 6 Versuchen 1 Punkt. Mit Tipp gibt es einen Punkt weniger, nicht gelöst zählt 0.</p></div>`;
 
   // 2) Rekorde
@@ -527,13 +529,18 @@ function renderStats(){
   const early=wins.filter(x=>x.t.zeit).map(x=>{ const z=new Date(x.t.zeit); return {x, min:z.getHours()*60+z.getMinutes(), z}; }).sort((a,b)=>a.min-b.min)[0];
   if(early) recs.push(["Früher Vogel", esc(early.x.p.name), `hat Türchen ${early.x.d} schon um ${early.z.getHours()}:${String(early.z.getMinutes()).padStart(2,"0")} Uhr gelöst`]);
   const noTip=ps.filter(p=>p.won>=3 && p.tips===0).sort((a,b)=>b.won-a.won)[0];
+  const tipFan=ps.slice().sort((a,b)=>b.tips-a.tips)[0];
+  if(tipFan && tipFan.tips>=2) recs.push(["Meiste Tipps", esc(tipFan.name), `hat sich ${tipFan.tips}-mal einen Tipp geholt`]);
+  const tipDays={}; all.forEach(x=>{ if(x.t.tip) tipDays[x.d]=(tipDays[x.d]||0)+1; });
+  const tipDay=Object.entries(tipDays).sort((a,b)=>b[1]-a[1])[0];
+  if(tipDay && tipDay[1]>=2) recs.push(["Tipp am häufigsten gebraucht", `Türchen ${tipDay[0]}`, `${tipDay[1]} haben den Tipp aufgedeckt`]);
   if(noTip) recs.push(["Ganz ohne Tipp", esc(noTip.name), `${noTip.won} Rätsel gelöst, kein einziger Tipp`]);
   if(recs.length) html+=`<div class="panel"><h3>Rekorde</h3><div class="recs">${recs.map(r=>`<div class="rec"><span class="k">${r[0]}</span><span class="v">${r[1]}</span><span class="d">${r[2]}</span></div>`).join("")}</div></div>`;
 
   // 3) Verteilung der Versuche
   const dist=[0,0,0,0,0,0,0]; all.forEach(x=>{ dist[x.t.won?Math.min(6,Math.max(1,x.t.n))-1:6]++; });
   const max=Math.max(...dist,1), topI=dist.indexOf(Math.max(...dist));
-  html+=`<div class="panel"><h3>So viele Versuche wurden gebraucht</h3><div class="dist">${dist.map((v,i)=>`<div class="bar${i===topI&&v?" top":""}"><span style="background:none;padding:0;min-width:0;text-align:left">${i<6?i+1:"X"}</span><span style="width:${Math.max(8,v/max*100)}%">${v}</span></div>`).join("")}</div><p class="note">Alle ${all.length} gespielten Rätsel aller Mitspielerinnen und Mitspieler. X = nicht gelöst.</p></div>`;
+  html+=`<div class="panel"><h3>So viele Versuche wurden gebraucht</h3><div class="dist">${dist.map((v,i)=>`<div class="bar${i===topI&&v?" top":""}"><span style="background:none;padding:0;min-width:0;text-align:left">${i<6?i+1:"X"}</span><span style="width:${Math.max(8,v/max*100)}%">${v}</span></div>`).join("")}</div><p class="note">Alle ${all.length} gespielten Rätsel aller Mitspielerinnen und Mitspieler, davon ${all.filter(x=>x.t.tip).length} mit Tipp. X = nicht gelöst.</p></div>`;
 
   // 4) Türchen im Vergleich
   const openDays=[]; for(let d=1;d<=24;d++) if(isOpen(d) || perDay[d]) openDays.push(d);
@@ -552,9 +559,10 @@ function renderDay(ps){
   const mine=state[d]&&state[d].done;
   if(!rows.length){ box.innerHTML=`<p class="daysum">Bei Türchen ${d} hat noch niemand mitgemacht.</p>`; return; }
   const solved=rows.filter(r=>r.t.won).length;
-  let html=`<p class="daysum">Türchen ${d}: <b>${solved} von ${rows.length}</b> haben das Wort gefunden.</p>`;
+  const tipped=rows.filter(r=>r.t.tip).length;
+  let html=`<p class="daysum">Türchen ${d}: <b>${solved} von ${rows.length}</b> haben das Wort gefunden${tipped?`, <b>${tipped}</b> davon mit Tipp`:", alle ohne Tipp"}.</p>`;
   if(!mine && !VORSCHAU){ box.innerHTML=html+`<p class="note">Löse das Türchen zuerst selbst, dann siehst du hier, wie die anderen abgeschnitten haben.</p>`; return; }
-  html+=`<div class="dayrows">`+rows.map(r=>`<div class="dayrow"><span class="nm">${esc(r.p.name)}${r.p.id===myId?" (du)":""}</span>${miniGrid(r.t.muster)}<span class="res">${r.t.won?`<b>${r.t.n}</b> ${r.t.n===1?"Versuch":"Versuche"}`:"nicht gelöst"}${r.t.tip?"<br>mit Tipp":""}</span></div>`).join("")+`</div>`;
+  html+=`<div class="dayrows">`+rows.map(r=>`<div class="dayrow"><span class="nm">${esc(r.p.name)}${r.p.id===myId?" (du)":""}</span>${miniGrid(r.t.muster)}<span class="res">${r.t.won?`<b>${r.t.n}</b> ${r.t.n===1?"Versuch":"Versuche"}`:"nicht gelöst"}${r.t.tip?`<br><span class="tipbadge">mit Tipp</span>`:""}</span></div>`).join("")+`</div>`;
   box.innerHTML=html;
 }
 

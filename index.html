@@ -194,7 +194,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <div id="help" class="dlg" hidden>
   <div class="hbox" role="dialog" aria-label="Anleitung">
     <h3>So geht's</h3>
-    <p>Errate das gesuchte Wort. Es hat <b>4 bis 7 Buchstaben</b>, wie viele, steht über dem Spielfeld. Du hast <b>einen Versuch mehr, als das Wort Buchstaben hat</b> (5 Buchstaben = 6 Versuche, 7 Buchstaben = 8 Versuche). Tippe ein Wort ein und drücke <b>Senden</b>.</p>
+    <p>Errate das gesuchte Wort. Es hat <b>4 bis 7 Buchstaben</b>, wie viele, steht über dem Spielfeld. Du hast <b>einen Versuch mehr, als das Wort Buchstaben hat</b> (5 Buchstaben = 6 Versuche, 7 Buchstaben = 8 Versuche). Tippe ein echtes deutsches Wort ein und drücke <b>Senden</b>, Fantasiewörter werden nicht angenommen.</p>
     <div class="demo"><div class="tile absent">H</div><div class="tile correct">A</div><div class="tile absent">R</div><div class="tile present">F</div><div class="tile present">E</div></div>
     <p><b style="color:var(--hit)">Grün:</b> Buchstabe steht an der richtigen Stelle.<br><b style="color:var(--near)">Gelb:</b> kommt im Wort vor, aber woanders.<br><b style="color:var(--muted)">Grau:</b> kommt nicht vor.</p>
     <p>Ä, Ö, Ü und ß zählen als eigene Buchstaben. Ab dem 3. Fehlversuch kannst du einen <b>Tipp</b> aufdecken, das kostet aber einen Punkt.</p>
@@ -221,7 +221,7 @@ table.rank{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 // ===================== HIER ANPASSEN =====================
-const APP_VERSION = "1.8.1";
+const APP_VERSION = "1.9.0";
 const NAME = "Mama";          // wird in Überschrift und Weihnachtsgruß verwendet
 const JAHR = 2026;            // Dezember dieses Jahres
 // Firebase-Zugangsdaten (Firebase-Konsole > Projekteinstellungen > Deine Apps > Web-App > Konfiguration)
@@ -280,6 +280,9 @@ const MAXALL = Math.max(...WOERTER.map((w,i)=>maxOf(i+1)));
 const ptsFor = (d,t) => t.won ? Math.max(1, maxOf(d)+1-t.n-(t.tip?1:0)) : 0;
 const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const CODE = {c:"correct", p:"present", a:"absent"};
+// Wörterbuch-Prüfung: woerter.txt liegt neben der Seite (deutsche Wörter mit 4–7 Buchstaben inkl. gebeugter Formen)
+let WORTLISTE = null;
+fetch("woerter.txt").then(r=>r.ok?r.text():null).then(t=>{ if(t) WORTLISTE=new Set(t.split("\n").map(w=>w.trim()).filter(Boolean)); }).catch(()=>{});
 
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ return {}; } }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
@@ -393,7 +396,9 @@ function press(k){
 function submit(){
   const s=state[cur], word=WOERTER[cur-1][0];
   if(input.length<lenOf(cur)){ const row=$("board").children[s.guesses.length]; row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake"); toast(`Das Wort braucht ${lenOf(cur)} Buchstaben.`); return; }
-  const g=input.join(""); s.guesses.push(g); input=[];
+  const g=input.join("");
+  if(WORTLISTE && g!==word && !WORTLISTE.has(g)){ const row=$("board").children[s.guesses.length]; row.classList.remove("shake"); void row.offsetWidth; row.classList.add("shake"); toast(`„${g}“ steht nicht im Wörterbuch.`); return; }
+  s.guesses.push(g); input=[];
   if(g===word) s.done="won"; else if(s.guesses.length>=maxOf(cur)) s.done="lost";
   if(s.done){ s.zeit=Date.now(); }
   save(); busy=true; paint(true);
